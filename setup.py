@@ -17,7 +17,7 @@ setuptools.setup(
     author_email="kashyap.chitta@uni-tuebingen.de",
     description="tuPlan Garage of the Autonomous Vision Group.",
     url="https://github.com/autonomousvision/tuplan_garage",
-    python_requires=">=3.9",
+    python_requires=">=3.8",
     packages=["tuplan_garage"],
     package_dir={"": "."},
     classifiers=[

@@ -1,6 +1,13 @@
 from typing import Tuple
 
-import numpy as np
+# import numpy as np
+try:
+    import cupy as np
+    _USE_GPU = True
+except ModuleNotFoundError:
+    import numpy as np
+    print("CuPy not available, only use_gpu=False will work")
+    _USE_GPU = False
 import numpy.typing as npt
 
 from tuplan_garage.planning.simulation.planner.pdm_planner.utils.pdm_geometry_utils import (
@@ -128,18 +135,36 @@ def _fit_initial_velocity_and_acceleration_profile(
     # If there are M displacements, then we have M - 1 acceleration values.
     # That means we have M - 2 jerk values, thus we make a banded difference matrix of that size.
     banded_matrix = _make_banded_difference_matrix(num_displacements - 2)
-    R: npt.NDArray[np.float64] = np.block(
-        [np.zeros((len(banded_matrix), 1)), banded_matrix]
-    )
+    # TODO: Verify this is correct!
+    # R: npt.NDArray[np.float64] = np.block(
+    #     [np.zeros((len(banded_matrix), 1)), banded_matrix]
+    # )
+    R = np.concatenate([np.zeros((len(banded_matrix), 1)), banded_matrix], axis=1) 
+
     R = np.repeat(R[None, ...], batch_size, axis=0)
 
     A_T, R_T = np.transpose(A, (0, 2, 1)), np.transpose(R, (0, 2, 1))
 
     # Compute regularized least squares solution.
-    intermediate_solution = batch_matmul(
-        np.linalg.pinv(batch_matmul(A_T, A) + jerk_penalty * batch_matmul(R_T, R)), A_T
-    )
-    x = np.einsum("bij, bj -> bi", intermediate_solution, y)
+    A_T = A_T.astype(np.float32)
+    A = A.astype(np.float32)
+    R_T = R_T.astype(np.float32)
+    R = R.astype(np.float32)
+    y = y.astype(np.float32)
+
+    import torch
+
+    A_T_torch = torch.from_dlpack(A_T).to(torch.float32)
+    A_torch = torch.from_dlpack(A).to(torch.float32)
+    R_T_torch = torch.from_dlpack(R_T).to(torch.float32)
+    R_torch = torch.from_dlpack(R).to(torch.float32)
+    y_torch = torch.from_dlpack(y).to(torch.float32)
+
+    intermediate_torch = torch.matmul(torch.linalg.pinv(torch.matmul(A_T_torch, A_torch) + jerk_penalty * torch.matmul(R_T_torch, R_torch)), A_T_torch)
+    x_torch = torch.einsum("bij,bj->bi", intermediate_torch, y_torch)
+
+    intermediate_solution = np.from_dlpack(intermediate_torch.to(torch.float32))
+    x = np.from_dlpack(x_torch.to(torch.float32))
 
     # Extract profile from solution.
     initial_velocity = x[:, 0]
@@ -195,9 +220,20 @@ def _fit_initial_curvature_and_curvature_rate_profile(
 
     # Compute regularized least squares solution.
     A_T = A.transpose(0, 2, 1)
+    
+    import torch
+    
+    # TODO: Verify FP32 is good enough
+    A_T_torch = torch.from_dlpack(A_T).to(torch.float32)
+    A_torch = torch.from_dlpack(A).to(torch.float32)
+    Q_torch = torch.from_dlpack(Q).to(torch.float32)
+    y_torch = torch.from_dlpack(y).to(torch.float32)
 
-    intermediate = batch_matmul(np.linalg.pinv(batch_matmul(A_T, A) + Q), A_T)
-    x = np.einsum("bij,bj->bi", intermediate, y)
+    intermediate_torch = torch.matmul(torch.linalg.pinv(torch.matmul(A_T_torch, A_torch) + Q_torch), A_T_torch)
+    x_torch = torch.einsum("bij,bj->bi", intermediate_torch, y_torch)
+
+    intermediate = np.from_dlpack(intermediate_torch.to(torch.float32))
+    x = np.from_dlpack(x_torch.to(torch.float32))
 
     # Extract profile from solution.
     initial_curvature = x[:, 0]

@@ -1,6 +1,10 @@
 from enum import IntEnum
 
 
+class classproperty(property):
+    def __get__(self, owner_self, owner_cls):
+        return self.fget(owner_cls)
+    
 class StateIndex:
     """Index mapping for array representation of ego states."""
 
@@ -27,81 +31,66 @@ class StateIndex:
         ]
         return len(valid_attributes)
 
-    @classmethod
-    @property
+    @classproperty
     def X(cls):
         return cls._X
 
-    @classmethod
-    @property
+    @classproperty
     def Y(cls):
         return cls._Y
 
-    @classmethod
-    @property
+    @classproperty
     def HEADING(cls):
         return cls._HEADING
 
-    @classmethod
-    @property
+    @classproperty
     def VELOCITY_X(cls):
         return cls._VELOCITY_X
 
-    @classmethod
-    @property
+    @classproperty
     def VELOCITY_Y(cls):
         return cls._VELOCITY_Y
 
-    @classmethod
-    @property
+    @classproperty
     def ACCELERATION_X(cls):
         return cls._ACCELERATION_X
 
-    @classmethod
-    @property
+    @classproperty
     def ACCELERATION_Y(cls):
         return cls._ACCELERATION_Y
 
-    @classmethod
-    @property
+    @classproperty
     def STEERING_ANGLE(cls):
         return cls._STEERING_ANGLE
 
-    @classmethod
-    @property
+    @classproperty
     def STEERING_RATE(cls):
         return cls._STEERING_RATE
 
-    @classmethod
-    @property
+    @classproperty
     def ANGULAR_VELOCITY(cls):
         return cls._ANGULAR_VELOCITY
 
-    @classmethod
-    @property
+    @classproperty
     def ANGULAR_ACCELERATION(cls):
         return cls._ANGULAR_ACCELERATION
 
-    @classmethod
-    @property
+    @classproperty
     def POINT(cls):
         # assumes X, Y have subsequent indices
         return slice(cls._X, cls._Y + 1)
 
-    @classmethod
-    @property
+    @classproperty
     def STATE_SE2(cls):
         # assumes X, Y, HEADING have subsequent indices
         return slice(cls._X, cls._HEADING + 1)
 
-    @classmethod
-    @property
+    @classproperty
     def VELOCITY_2D(cls):
         # assumes velocity X, Y have subsequent indices
         return slice(cls._VELOCITY_X, cls._VELOCITY_Y + 1)
 
-    @classmethod
-    @property
+    @classproperty
     def ACCELERATION_2D(cls):
         # assumes acceleration X, Y have subsequent indices
         return slice(cls._ACCELERATION_X, cls._ACCELERATION_Y + 1)

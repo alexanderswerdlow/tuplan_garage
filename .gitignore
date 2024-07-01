@@ -9,3 +9,4 @@
 
 # Pip
 *.egg-info
+tuplan_garage/planning/simulation/planner/pdm_planner/utils/pdm_path.py
